@@ -1,11 +1,13 @@
 {
 	"translatorID": "9cb70025-a888-4a29-a210-93ec52da40d4",
+	"translatorType": 3,
 	"label": "BibTeX",
 	"creator": "Simon Kornblith, Richard Karnesky and Emiliano heyns",
 	"target": "bib",
 	"minVersion": "2.1.9",
-	"maxVersion": "",
+	"maxVersion": null,
 	"priority": 200,
+	"inRepository": true,
 	"configOptions": {
 		"async": true,
 		"getCollections": true
@@ -16,9 +18,7 @@
 		"exportFileData": false,
 		"useJournalAbbreviation": false
 	},
-	"inRepository": true,
-	"translatorType": 3,
-	"lastUpdated": "2023-04-09 18:35:07"
+	"lastUpdated": "2023-04-09 19:00:00"
 }
 
 /*
@@ -1254,12 +1254,19 @@ var citeKeyConversions = {
 	},
 	"t":function (flags, item) {
 		if (item["title"]) {
-			return item["title"].toLowerCase().replace(citeKeyTitleBannedRe, "").split(/\s+/g)[0];
+			return item["title"].toLowerCase().replace(citeKeyTitleBannedRe, "").split(/–|\s+/g)[0];
 		}
 		return "notitle";
 	},
 	"y":function (flags, item) {
 		if (item.date) {
+			//Skip strToDate() for specially-implemented qualitative date codes
+			qualDateRE = /(revisions )?(in prep|under review)|forthcoming|in press/g ;
+			if (qualDateRE.exec(item.date)) {
+				return item.date.replace(/ /g, "_");
+			}
+			
+			//Original code follows
 			var date = Zotero.Utilities.strToDate(item.date);
 			if (date.year && numberRe.test(date.year)) {
 				return date.year;
@@ -1480,13 +1487,22 @@ function doExport() {
 		}
 		
 		if (item.date) {
-			var date = Zotero.Utilities.strToDate(item.date);
-			// need to use non-localized abbreviation
-			if (typeof date.month == "number") {
-				writeField("month", months[date.month], true);
-			}
-			if (date.year) {
-				writeField("year", date.year);
+			//Skip strToDate() for specially-implemented qualitative date codes
+			qualDateRE = /(revisions )?(in prep|under review)|forthcoming|in press/g ;
+			qualDate = qualDateRE.exec(item.date);
+			if (qualDate !== null) {
+				writeField("year", item.date);
+			} else {
+				
+				//Original code starts here
+				var date = Zotero.Utilities.strToDate(item.date);
+				// need to use non-localized abbreviation
+				if (typeof date.month == "number") {
+					writeField("month", months[date.month], true);
+				}
+				if (date.year) {
+					writeField("year", date.year);
+				}
 			}
 		}
 		
